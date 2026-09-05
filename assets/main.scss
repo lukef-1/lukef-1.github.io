@@ -1,0 +1,41 @@
+---
+---
+
+$base-font-size:   16px;
+$base-line-height: 1.6;
+$spacing-unit:     30px;
+$content-width:    800px;
+$brand-color:      #2a7ae2;
+$text-color:       #111;
+
+@import "minima";
+.post-content {
+    h2 {
+        font-size: 1.8em;
+        font-weight: 500;
+        margin-top: 1em;
+        margin-bottom: 0.4em;
+    }
+
+    h3 {
+        font-size: 1.5em;
+        font-weight: 500;
+        margin-top: 0.8em;
+        margin-bottom: 0.3em
+    }
+
+    h4 {
+        font-size: 1.2em;
+        font-weight: 500;
+        margin-bottom: 0.2em
+    }
+
+    code {
+        font-size: 0.82em;
+        border: none;
+    }
+
+    pre {
+        margin-bottom: 1.8em;
+    }
+}

@@ -1,0 +1,14 @@
+title: Posts
+description: A home for my posts and more. Under construction!
+url: "https://lukef-1.github.io"
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+defaults:
+  - scope: { path: "", type: posts }
+    values: { layout: post }
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - vendor
