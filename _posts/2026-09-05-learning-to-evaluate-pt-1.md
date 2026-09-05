@@ -132,18 +132,16 @@ After running everything, I used the built-in `Inspect` dashboard to view indivi
 
 ## Results
 
-Given the basic state of this eval, take the results with a major grain of salt. See the Takeaways section below for the improvements being considered.
-
-> Another grain of salt: Standard errors below are optimistic given the question-level clustering. 
+Given the basic state of this eval, take the results with a major grain of salt. Another grain of salt: Standard errors below are optimistic given the question-level clustering. *See the Takeaways section below for the improvements being considered.*
 
 **Overall Accuracy, by Scenario** (Mean across all runs, n=216 per cell from 72 questions x 3 runs)
 
 | Scenario | Accuracy | Standard Error |
 | :---------------------------- | -------: | ----: |
-| `LLM Only` (Sonnet 5) | 34.7% | ±3.2pp |
-| `LLM + FRED API` (Sonnet 5) | **100%** | --|
-| `LLM Only` (Gemma 4: e4b) | 1.9% | ±0.9pp |
-| `LLM + FRED API` (Gemma 4: e4b) | 70.8% | ±3.1pp |
+| `LLM Only` - **Sonnet 5** | 34.7% | ±3.2pp |
+| `LLM + FRED API` - **Sonnet 5** | 100% | --|
+| `LLM Only` - **Gemma 4: e4b** | 1.9% | ±0.9pp |
+| `LLM + FRED API` - **Gemma 4: e4b1** | 70.8% | ±3.1pp |
 
 The `LLM + FRED API` scenario strongly outperformed `LLM Only`, with Sonnet 5 getting **100% of questions correct** when given access to the FRED API. Notably, Gemma 4: e4b went from a meager **1.9%** correct to **70.8%** once armed with the API. This result makes sense, since the API provides the exact answers to the tests, and asking an LLM to navigate a single tool call is simple. That said, Gemma 4: e4b struggled to use the tool at times, occasionally calling the wrong tool name and getting an error, or stating in its reasoning that it was going to call a tool and then doing nothing.
 
@@ -152,10 +150,10 @@ The `LLM + FRED API` scenario strongly outperformed `LLM Only`, with Sonnet 5 ge
 
 | Scenario | 2016 - 2020 | 2021 - 2025 | 2026 |
 | :---------------------------- | ------------: | ------------: | -----------: |
-| `LLM Only` (Sonnet 5) | 59.7% (±5.8pp) | 44.4% (±5.9pp) | 0.0% (--) |
-| `LLM + FRED API` (Sonnet 5) | 100% (--) | 100% (--) | 100% (--) |
-| `LLM Only` (Gemma 4: e4b) | 5.6% (±2.7pp) | 0.0% (--) | 0.0% (--) |
-| `LLM + FRED API` (Gemma 4: e4b) | 68.1% (±5.5pp) | 77.8% (±4.9pp) | 66.7% (±5.6pp) |
+| `LLM Only` - **Sonnet 5** | 59.7% (±5.8pp) | 44.4% (±5.9pp) | 0.0% (--) |
+| `LLM + FRED API` - **Sonnet 5** | 100% (--) | 100% (--) | 100% (--) |
+| `LLM Only` - **Gemma 4: e4b** | 5.6% (±2.7pp) | 0.0% (--) | 0.0% (--) |
+| `LLM + FRED API` - **Gemma 4: e4b** | 68.1% (±5.5pp) | 77.8% (±4.9pp) | 66.7% (±5.6pp) |
 
 Looking across year ranges, Sonnet 5 `LLM Only` performs best in `2016 - 2020`, slightly worse in `2021 - 2025`, and then gets nothing correct in `2026`. This matches the expectation that older data is more likely to be in the model's training corpus. Performance did not vary meaningfully across time in the `LLM + FRED API` scenario, with Sonnet 5 getting everything correct and Gemma 4: e4b's mistakes being caused by errors accessing the tool.
 
@@ -163,10 +161,10 @@ Looking across year ranges, Sonnet 5 `LLM Only` performs best in `2016 - 2020`, 
 
 | Scenario | Correct | Incorrect | No Answer |
 | :---------------------------- | ------: | --------: | --------: |
-| `LLM Only` (Sonnet 5) | 34.7% | 29.2% | **36.1%** |
-| `LLM + FRED API` (Sonnet 5) | 100% | 0% | **0%** |
-| `LLM Only` (Gemma 4: e4b) | 1.9% | 2.3% | **95.8%** |
-| `LLM + FRED API` (Gemma 4: e4b) | 70.8% | 29.2% | **0%** |
+| `LLM Only` - **Sonnet 5** | 34.7% | 29.2% | **36.1%** |
+| `LLM + FRED API` - **Sonnet 5** | 100% | 0% | **0%** |
+| `LLM Only` - **Gemma 4: e4b** | 1.9% | 2.3% | **95.8%** |
+| `LLM + FRED API` - **Gemma 4: e4b** | 70.8% | 29.2% | **0%** |
 
 Lastly, we'll look at the model's "refusal" rates, where replying `UNKNOWN` is treated as No Answer. Sonnet 5's `LLM Only` run produced No Answers in about a third of cases, largely driven by refusing to answer 100% of the 2026 questions. It still, however, produced incorrect numbers in about 30% of cases. Gemma 4: e4b refused to answer almost any question in its `LLM Only` run. 
 
