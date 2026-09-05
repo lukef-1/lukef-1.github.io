@@ -1,5 +1,7 @@
 ---
 title: Learning to Evaluate LLMs, part 1
+author: Luke
+description: Steps to set up a basic LLM eval (with results!)
 ---
 
 *Building a basic evaluation testing LLM's ability to recall U.S. macroeconomic data.*
@@ -141,7 +143,7 @@ Given the basic state of this eval, take the results with a major grain of salt.
 | `LLM Only` - **Sonnet 5** | 34.7% | ±3.2pp |
 | `LLM + FRED API` - **Sonnet 5** | 100% | --|
 | `LLM Only` - **Gemma 4: e4b** | 1.9% | ±0.9pp |
-| `LLM + FRED API` - **Gemma 4: e4b1** | 70.8% | ±3.1pp |
+| `LLM + FRED API` - **Gemma 4: e4b** | 70.8% | ±3.1pp |
 
 The `LLM + FRED API` scenario strongly outperformed `LLM Only`, with Sonnet 5 getting **100% of questions correct** when given access to the FRED API. Notably, Gemma 4: e4b went from a meager **1.9%** correct to **70.8%** once armed with the API. This result makes sense, since the API provides the exact answers to the tests, and asking an LLM to navigate a single tool call is simple. That said, Gemma 4: e4b struggled to use the tool at times, occasionally calling the wrong tool name and getting an error, or stating in its reasoning that it was going to call a tool and then doing nothing.
 
