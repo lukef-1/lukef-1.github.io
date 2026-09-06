@@ -20,19 +20,19 @@ This post walks through my experience getting a simple eval up-and-running using
 
 **My eval tests LLMs' ability to accurately recall U.S. macroeconomic data from 2016 to 2026**. I chose this for a combination of personal interest and strong data availability. The [St. Louis Fed (FRED) API](https://fred.stlouisfed.org/docs/api/fred/) makes pulling economic data easy, meaning we can build a set of test questions with clear answers **and** build a tool for LLMs to pull data directly.
 
-I was curious how the LLMs would perform on older and more recent data, so my questions spanned three year ranges: `2016 - 2020`, `2021 - 2025`, and `2026`. I expected good performance on older years (more likely in their training data) and little-to-no knowledge about `2026` unless given tool access.
+I was curious how the LLMs would perform on older and more recent data, so my questions spanned three year ranges: 2016 - 2020, 2021 - 2025, and 2026. I expected good performance on older years (more likely in their training data) and little-to-no knowledge about 2026 unless given tool access.
 
 The eval's data comes from 8 popular FRED data series, and each has a scoring tolerance to give credit for answers that are very slightly off. The tolerances weren't chosen scientifically, but I wanted them to be consistent across series with similar units. I then pulled three random observations per year range per series for **72** total samples (3 samples x 3 year ranges x 8 data series). Sampling made eval runs more manageable, but at the cost of less robust results. 
 
 | Series ID | Series Name                                          | Units                                               | Tolerance |
 | :-------- | :--------------------------------------------------- | :-------------------------------------------------- | :-------- |
-| UNRATE    | Unemployment Rate                                    | Percent, Seasonally Adjusted                        | ± 0.1     |
-| CIVPART   | Labor Force Participation Rate                       | Percent, Seasonally Adjusted                        | ± 0.1     |
-| FEDFUNDS  | Effective Federal Funds Rate                         | Percent, Not Seasonally Adjusted                    | ± 0.05    |
+| UNRATE    | Unemployment Rate                                    | %, Seasonally Adjusted                        | ± 0.1     |
+| CIVPART   | Labor Force Participation Rate                       | %, Seasonally Adjusted                        | ± 0.1     |
+| FEDFUNDS  | Effective Federal Funds Rate                         | %, Not Seasonally Adjusted                    | ± 0.05    |
 | CPIAUCSL  | Consumer Price Index: All Urban Consumers, All Items | Index 1982-1984=100, Seasonally Adjusted            | ± 0.5     |
 | CPILFESL  | CPI: All Items Less Food and Energy                  | Index 1982-1984=100, Seasonally Adjusted            | ± 0.5     |
-| PAYEMS    | Total Nonfarm Payroll Employment                     | Thousands of Persons, Seasonally Adjusted           | ± 200     |
-| HOUST     | New Privately-Owned Housing Units Started            | Thousands of Units, Seasonally Adjusted Annual Rate | ± 30      |
+| PAYEMS    | Total Nonfarm Payroll Employment                     | Thousands, Seasonally Adjusted           | ± 200     |
+| HOUST     | New Privately-Owned Housing Units Started            | Thousands, Seasonally Adjusted Annual Rate | ± 30      |
 | INDPRO    | Industrial Production Index                          | Index 2017=100, Seasonally Adjusted                 | ± 0.5     |
 
 I then asked each question to the LLMs in two scenarios:
@@ -54,7 +54,7 @@ I started by writing a script that calls the FRED API, filters down to the sampl
 When building the `input` prompt, I leaned towards giving the LLM all the information it would need to answer the question. That included the FRED `series_id`, which is required for API calls, and the `units` expected in the response. This was one of the most important decisions in designing the eval, and including information liberally almost certainly made the task easier for the LLMs. More thoughts on that in the Takeaways section below.
 
 After running the script and cross-checking the results on the St. Louis Fed website, we ended up with 72 entries like this:
-```
+```json
 {
     "input": "According to FRED series UNRATE (units: Percent, Seasonally Adjusted), what was the value of Unemployment Rate in the United States in July 2025?",
     "target": 4.3,
@@ -68,6 +68,7 @@ After running the script and cross-checking the results on the St. Louis Fed web
     "tolerance": 0.101
 }
 ```
+{: .wrap}
 
 
 ### Solver: System prompt + tools for each test scenario
@@ -157,7 +158,7 @@ The `LLM + FRED API` scenario strongly outperformed `LLM Only`, with Sonnet 5 ge
 | `LLM Only` - **Gemma 4: e4b** | 5.6% (±2.7pp) | 0.0% (--) | 0.0% (--) |
 | `LLM + FRED API` - **Gemma 4: e4b** | 68.1% (±5.5pp) | 77.8% (±4.9pp) | 66.7% (±5.6pp) |
 
-Looking across year ranges, Sonnet 5 `LLM Only` performs best in `2016 - 2020`, slightly worse in `2021 - 2025`, and then gets nothing correct in `2026`. This matches the expectation that older data is more likely to be in the model's training corpus. Performance did not vary meaningfully across time in the `LLM + FRED API` scenario, with Sonnet 5 getting everything correct and Gemma 4: e4b's mistakes being caused by errors accessing the tool.
+Looking across year ranges, Sonnet 5 `LLM Only` performs best in 2016 - 2020, slightly worse in 2021 - 2025, and then gets nothing correct in 2026. This matches the expectation that older data is more likely to be in the model's training corpus. Performance did not vary meaningfully across time in the `LLM + FRED API` scenario, with Sonnet 5 getting everything correct and Gemma 4: e4b's mistakes being caused by errors accessing the tool.
 
 **Answer Type, by Scenario** (Mean across all runs, n=216 from 72 questions per cell x 3 runs)
 
@@ -175,6 +176,8 @@ Refusals are certainly better than factually incorrect answers, so the ideal spl
 
 ## Takeaways and next steps
 This eval quantifies the huge impact the FRED API tool has on model performance. It's also interesting, but not surprising, that tool access significantly shrinks the performance gap between Sonnet 5 and Gemma 4: e4b. That said, an eval that can so easily be solved with isn't particularly useful for measuring model improvement or comparing performance across models.
+
+*Note*: A 100% success rate is ideal for evaluating product feature performance, but it's less interesting in this context of assessing general model capabilities.
 
 My main focus for v2 of the eval is **making the task harder** to create more spread in results. I'm considering a few options, including no longer giving FRED `series_id`s in the prompt and shrinking the acceptable tolerance ranges. I'm going to do some research on other options too.
 

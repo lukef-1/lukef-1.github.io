@@ -4,30 +4,35 @@
 $base-font-size:   16px;
 $base-line-height: 1.6;
 $spacing-unit:     30px;
-$content-width:    800px;
+$content-width:    720px;
 $brand-color:      #2a7ae2;
 $text-color:       #111;
+$background-color: #f4f4f2;
+
 
 @import "minima";
 .post-content {
     h2 {
         font-size: 1.8em;
         font-weight: 500;
-        margin-top: 1em;
+        line-height: 1.4em;
+        margin-top: 2em;
         margin-bottom: 0.4em;
     }
 
     h3 {
         font-size: 1.5em;
         font-weight: 500;
-        margin-top: 0.8em;
-        margin-bottom: 0.3em
+        line-height: 1.4em;
+        margin-top: 1.6em;
+        margin-bottom: 0.3em;
     }
 
     h4 {
         font-size: 1.2em;
         font-weight: 500;
-        margin-bottom: 0.2em
+        margin-top: 1.4em;
+        margin-bottom: 0.2em;
     }
 
     code {
@@ -37,11 +42,17 @@ $text-color:       #111;
 
     pre {
         margin-bottom: 1.8em;
+        background: #ebebe8;
+        border: 1px solid #dededa;
+    }
+
+    .wrap pre {
+        white-space: pre-wrap;
+        word-break: break-word;
     }
 
     table {
         font-size: 0.9em;
-          line-height: 1.45;
-
+        line-height: 1.45;
     }
 }
