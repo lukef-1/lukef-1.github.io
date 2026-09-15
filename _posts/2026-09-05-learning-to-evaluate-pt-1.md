@@ -135,7 +135,7 @@ After running everything, I used the built-in `Inspect` dashboard to view indivi
 
 ## Results
 
-Given the basic state of this eval, take the results with a major grain of salt. Another grain of salt: Standard errors below are optimistic given the question-level clustering. *See the Takeaways section below for the improvements being considered.*
+A grain of salt: Standard errors below are optimistic given the question-level clustering.
 
 **Overall Accuracy, by Scenario** (Mean across all runs, n=216 per cell from 72 questions x 3 runs)
 
