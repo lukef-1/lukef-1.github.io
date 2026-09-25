@@ -20,11 +20,11 @@ To prepare for v2, I made a handful of updates to make the eval setup more robus
 
 First, I started using **[OpenRouter](https://openrouter.ai)** to manage the LLMs being evaluated. While v1 only tested two models (Claude Sonnet 5 and Gemma 4: e4b running locally), OpenRouter made managing multiple models easier (only 1 API key needed!) and integrated nicely with `Inspect`.
 
-Second, I switched to primarily **testing weaker LLMs**, which are more likely to find the task challenging. OpenRouter made this easy, and the change let me evaluate weaker models on a fairly easy task. A nice side effect was much cheaper token costs. I kept one near-frontier model (Claude Opus 5) in the mix for comparison. Read on for the full list of models tested.
+Second, I switched to primarily **testing weaker LLMs**, which are more likely to find the task challenging. OpenRouter made this easy, and the change let me evaluate weaker models on a fairly easy task. A nice side effect was much cheaper token costs. I kept one near-frontier model, Claude Opus 5, in the mix for comparison. Read on for the full list of models tested.
 
-Third, I introduced **out-of-scope** date questions and slightly **increased sample sizes**. I added 2 samples to each of the 8 FRED series from dates clearly before data became available (1880 to 1900) and 2 from dates in the future (2030 to 2050) to see if the models would mark them as `INVALID` per the system prompt. I also moved from 3 to **5** samples per in-scope time period to reduce standard errors in our results. Each test run now had **152** total samples.
+Third, I introduced questions about **out-of-scope dates** and slightly **increased sample sizes**. I added 2 samples to each of the 8 FRED series from dates clearly before data became available (1880 to 1900) and 2 from dates in the future (2030 to 2050) to see if the models would mark them as `INVALID` per the system prompt. I also moved from 3 to **5** samples per in-scope time period to reduce standard errors in our results. Each test run now had **152** total samples.
 
-Fourth, I introduced three **prompt variants** which were randomly assigned to test samples. I didn't experiment much since prompting wasn't the focus of the test, but the randomization logic would be easy to extend in the future. The core information was the same in each variant, but the phrasing was progressively more concise:
+Fourth, I introduced **three prompt variants** which were randomly assigned to samples with equal probability. I didn't experiment much since prompting wasn't the focus of the test, but the randomization logic would be easy to extend in the future. The core information was the same in each variant, but the phrasing was progressively more concise:
 1. "According to FRED data, what was the value of {series_name} (units: {series_units}) in the United States in {date}?"
 2. "In the US, what was the value of {series_name} (units: {series_units}) in {date}?"
 3. "US value of {series_name} (units: {series_units}) in {date}?"
@@ -33,7 +33,7 @@ Lastly, I added **on-disk caching** for all responses from FRED API calls. This 
 
 ## v2 evaluation design
 
-With those changes made, I focused on creating a more difficult evaluation task. My first try was removing the FRED `series_id`, which the model needs to query the FRED API for values, from the question prompt. I replaced the information with a **new tool** that let models look IDs up themselves, in theory making the task harder by adding an extra step. That change proved to be no challenge for the LLMs. They were still scoring 100% on the eval, so I had to push further to get an eval with any interesting variance.
+With those changes made, I focused on creating a more difficult evaluation task. My first try was removing the FRED `series_id`, which the model needs to query the FRED API for values, from the prompts. I replaced the information with a **new tool** that let models look IDs up themselves, in theory making the task harder by adding a required step. This proved to be no challenge for the LLMs. They were still scoring 100%, so I had to push further to get an eval with any interesting variance.
 
 The next step was introducing **flakiness into the tools themselves**, which quickly showed promise in stumping the agents. It was nice to see non-100% results coming back in limited testing, and tool flakiness became the main focus of the v2 eval.
 
@@ -58,7 +58,7 @@ In the new `Flaky Tools` scenario, every tool call was randomly assigned into on
 | Incorrect ordering |         20% | The full list but in reverse order     |
 | Accurate response  |         40% | The full, correct list                 |
 
-There was randomness in how many (and which) errors test cases hit, since each tool call got a separate random assignment. **16%** of test cases were expected to hit no errors (40% x 40%). Test cases that hit errors would need to re-try tool calls, leading to the possibility of those re-tries hitting errors, then the re-re-tries, etc. The models would need to make 5+ tool calls in some cases.
+There was randomness in how many errors test cases hit, since each tool call got a separate random assignment. **16%** of test cases were expected to hit no errors (40% x 40%). Test cases that hit errors would need to re-try tool calls, leading to the possibility of those re-tries hitting errors, then the re-re-tries, etc. The models would need to make 5+ tool calls in some cases.
 
 **We now have three v2 test scenarios**:
 1. `No Tools`: Same as the `LLM Only` scenario in v1
@@ -83,19 +83,19 @@ I ran each model with its default hyperparameters and without pinning a provider
 
 **`No Tools`** produced poor results again in the v2 eval. Stronger models performed better, with an **18.4 percentage point** spread between Deepseek v4 Flash and Opus 5, but scores remained well below 100%. Maybe models in a couple generations will solve this task based purely on their training data. Outside of one hallucination from GPT-5.6 Luna, the models correctly identified the out-of-scope dates as `INVALID`.
 
-**`Standard Tools`** trivialized the task as mentioned above, with the new Series ID lookup step proving no challenge. Every model scored at or near 100%, using the two FRED API tools exactly how they were intended. Both tools require only a couple parameters and little reasoning about the results, so this strong result isn't surprising.
+**`Standard Tools`** trivialized the task as mentioned above, with the new Series ID lookup step providing no challenge. Every model scored at or near 100% and used the FRED API tools how they were intended. Both tools require only a couple parameters and little reasoning about the results, so this strong result isn't surprising.
 - This result also lines up with the findings of [Tau-2 Bench](https://arxiv.org/abs/2506.07982), which found that agent performance falls sharply when tasks require ~7 complicated actions. A task with two simple actions is trivial for even today's open weight models.
 
 **`Flaky Tools`** results were more interesting. Every model's performance dipped by **23.7pp to 38.8pp**, with the weaker models slightly outperforming the strong models. GPT-5.6 Luna had the largest dip (**-38.8pp**) and was sometimes derailed by a single tool error, returning `UNKNOWN` after getting one server error or truncated response without a value. The model incorrectly returned `UNKNOWN` in **13.2%** of cases, while no other model returned it more than **4%** of the time.
-  
+
 ### Flaky tool handling patterns
 
-The `Flaky Tools` reasoning traces show how the models handled tool failures. (For anyone unfamiliar, frontier models hide or summarize their reasoning to fight model distillation, so open-weight model traces make the best reading). A few clear patterns emerged across all models in the logs:
+The `Flaky Tools` reasoning traces show how the models handled tool failures. (For anyone unfamiliar, frontier models hide or summarize their reasoning to fight model distillation, so open-weight model traces make the best reading.) A few patterns emerged across all models in the logs:
 
 **Repeated tool errors were the most common cause of incorrect answers.** Models usually recovered from a single tool error by re-calling tools when receiving truncated or incorrect responses. Repeated errors, however, were more likely to generate incorrect results. Seeing consecutive incorrect values or truncated responses, then eventually reporting the incorrect value, was the most common failure pattern in the logs.
 - See **Appendix 1A** for a representative log. 
 
-**Models used existing knowledge on series to treat incorrect values with suspicion.** Models often already knew observation value ranges and some series IDs, leading to suspicion about clearly incorrect information. As mentioned above, models would frequently re-call tools when a result clashed with their domain knowledge. In some cases, they'd even re-try the Series search to confirm they had the right Series ID or look up Observation values from a different month to check for a similar value. Tool errors in a domain with less existing knowledge would likely hurt model performance more.
+**Models used existing knowledge to treat incorrect values with suspicion.** Models often already knew observation value ranges and some series IDs, leading to suspicion about clearly incorrect information. As mentioned above, models would frequently re-call tools when a result clashed with their domain knowledge. In some cases, they'd even re-try the Series search to confirm they had the right Series ID or look up Observation values from a different month to check for a similar value. Tool errors in a domain with less existing knowledge would likely hurt model performance more.
 - See **Appendix 1B** for a representative log. 
 
 **Server errors and Series ID lookup errors were consistently handled**. Server errors alone almost never threw models off track. Similarly, the models effectively worked around Series ID lookup errors. With how I designed the latter, the correct Series ID was often still in the response, even if it was re-ordered or truncated. Server errors should be removed or strengthened in a future iteration, and Series ID lookup errors should remove more information and/or be tested on less popular series where models are less likely to have context from their training data.
@@ -120,7 +120,7 @@ Since we're now testing a variety of model sizes, it's worth looking at token sp
 
 ![token_use](/assets/images/2026-09-15-learning-to-evaluate-pt-2/token_use.png)
 
-**`No Tools`** saw widely varying token use from Deepseek v4 Flash and GLM 5.3 Flash, both of which had extreme outliers. One Deepseek v4 Flash answer had a runaway reasoning loop that used **131,254** tokens, and 8 answers used **25,000+** tokens despite the model's median being **449**. GLM 5.3 Flash was similar with a largest answer of **108,083** tokens, and 3 answers using **25,000+**. GPT-5.6 Luna and Opus 5, the stronger models, saw no runaway cases with max tokens per answer of **2,117** and **1,125** respectively. This suggests that stronger models are more capable of keeping their reasoning on track.
+**`No Tools`** had wide token use variance from Deepseek v4 Flash and GLM 5.3 Flash, both of which had extreme outliers. One Deepseek v4 Flash answer had a runaway reasoning loop that used **131,254** tokens, and 8 answers used **25,000+** tokens despite the model's median being **449**. GLM 5.3 Flash was similar with a high of **108,083** tokens and 3 answers using **25,000+**. GPT-5.6 Luna and Opus 5, the stronger models, saw no runaway cases with max tokens per answer of **2,117** and **1,125** respectively. This suggests that stronger models are more capable of keeping their reasoning on track.
 
 **`Standard Tools`** had little token use spread, likely driven by the very straightforward task. The weaker models easily reasoned about which tools to call and how to use the results.
 
@@ -131,7 +131,7 @@ Both **`Flaky Tools`** and **`Flaky Tools (No Path)`** saw some spread again, bu
 
 Lastly, we'll look at cost per question answered by scenario. Deepseek v4 Flash, GLM 5.3 Flash, and GPT-5.6 Luna were under $0.001 per question, and Opus 5 was **significantly** more expensive. For easier readability, costs are shown relative to Deepseek v4 Flash's cost.
 
-Opus 5's `No Tools` cost was **17x** higher than Deepseek v4 Flash, which may be justified given Opus's stronger performance on that scenario. Once given access to tools, however, Opus's cost rose to **132x** to **200x** more than Deepseek's. Despite that cost gap, Deepseek matched or beat Opus in two of three tool scenarios. This task seems well-suited for weaker models that can efficiently solve it.
+Opus 5's `No Tools` cost was **17x** higher than Deepseek v4 Flash, which may be justified given Opus's stronger performance in that scenario. Once given access to tools, however, Opus's cost rose to **132x** to **200x** more than Deepseek's. Despite that cost gap, Deepseek matched or beat Opus in two of three tool scenarios. This task with tools seems well-suited for weaker models to solve efficiently.
 
 ## Takeaways and lessons
 
